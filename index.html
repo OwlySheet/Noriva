@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>NØrivΔ — Observe</title>
+
+<link rel="stylesheet" href="css/style.css">
+
+</head>
+
+
+<body>
+
+
+<div class="app">
+
+
+<header class="app-header">
+
+<div class="brand">
+
+<svg class="brand-logo" viewBox="0 0 64 64" role="img" aria-label="Logo NØrivΔ"><circle cx="32" cy="32" r="27" fill="#121212" stroke="#4a4a4a" stroke-width="2"/><path d="M18 20c9-8 20-8 28 0M18 44c9 8 20 8 28 0" fill="none" stroke="#56b4e9" stroke-width="3" stroke-linecap="round"/><path d="M23 17v30M41 17v30" stroke="#777" stroke-width="2"/><path d="M32 20l9 18H23z" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg>
+
+<div>
+<h1>
+N<span class="brand-mark brand-mark--o">Ø</span>riv<span class="brand-mark brand-mark--a">Δ</span>
+</h1>
+
+<p class="subtitle">
+<a class="subtitle-link subtitle-link--active" href="index.html" data-student-locked>Observe</a>
+<span aria-hidden="true">•</span>
+<a class="subtitle-link" href="notes.html" data-student-locked>Écoute</a>
+<span aria-hidden="true">•</span>
+<a class="subtitle-link" href="understand.html">Comprend</a>
+<span aria-hidden="true">•</span>
+<a class="subtitle-link" href="understand.html?view=tools">Outils</a>
+</p>
+</div>
+
+</div>
+
+
+<div id="settingsGear" class="settings-gear teacher-only">
+⚙️
+</div>
+<button type="button" class="language-toggle" aria-label="Passer le site en anglais" title="English">🇫🇷</button>
+
+
+</header>
+
+<main>
+
+
+<section class="exercise-card">
+
+
+<!-- TONALITÉ -->
+
+<div id="toneBlock" class="tone">
+    <span id="toneDisplay"></span>
+</div>
+
+
+
+<!-- ACCORD PRINCIPAL -->
+
+<div id="degreeBlock" class="degree" aria-label="Degré de l'accord">
+    <span id="degreeDisplay"></span>
+</div>
+
+<div id="chordBlock" class="chord-display">
+
+
+<div id="note" class="note">
+
+C
+
+</div>
+
+
+<div id="quality" class="quality">
+
+m7
+
+</div>
+
+
+</div>
+
+
+
+<!-- DETAILS -->
+
+<div id="detailsBlock" class="details">
+
+<span id="stringBlock">Corde 5</span>
+<span id="detailsSeparator" aria-hidden="true"> • </span>
+<span id="zoneBlock">Centre</span>
+
+</div>
+
+<!-- INTERVALLE -->
+
+<div id="intervalBlock">
+
+
+<div id="intervalDisplay" class="interval">
+
+Trouver : ♭3
+
+</div>
+
+
+</div>
+
+
+
+<!-- PROCHAIN ACCORD -->
+
+<div id="nextBlock" class="next">
+
+
+<div class="next-label">
+
+PROCHAIN
+
+</div>
+
+<output id="positionAnswer" class="position-answer" aria-live="polite" hidden></output>
+
+
+<span id="nextExercise">
+
+E♭ Δ
+
+</span>
+
+
+</div>
+
+
+
+<div class="session-timer" aria-label="Durée de la session">
+<span class="session-timer__label">SESSION</span>
+<time id="sessionTimer" datetime="PT0S" aria-live="polite">00:00</time>
+</div>
+
+
+
+<section class="practice-metronome" aria-label="Métronome">
+
+<div class="metro-heading">
+<h2>Métronome</h2>
+<label class="metro-bpm-input" aria-label="Tempo en BPM"><input id="bpmValue" type="number" min="40" max="200" value="80" inputmode="numeric"><span>BPM</span></label>
+</div>
+
+<div class="metro-tempo-control">
+<input type="range" id="bpm" min="40" max="200" value="80">
+<div class="metro-range-labels" aria-hidden="true"><span>40</span><span>200</span></div>
+</div>
+
+<div class="metro-actions">
+<button id="metroButton">▶ Démarrer</button>
+<section id="pitchCheckPanel" class="pitch-check" hidden aria-live="polite">
+<button type="button" id="pitchCheckButton" class="secondary-button">🎙 Activer le micro</button>
+<output id="pitchCheckStatus"></output>
+</section>
+</div>
+
+</section>
+
+
+</section>
+
+<section class="panel" id="settingsPanel">
+
+
+<h2>
+Réglages
+</h2>
+
+
+
+<details class="settings-section" open>
+<summary><span>01</span> Mode de génération</summary>
+<div class="settings-section__content">
+<div class="choice-grid mode-selector">
+<label class="choice-card"><input type="radio" name="generationMode" value="chromatic" checked><span>Chromatique</span></label>
+<label class="choice-card"><input type="radio" name="generationMode" value="diatonic"><span>Diatonique</span></label>
+</div>
+
+<div class="diatonic-settings setting-subgroup">
+<p class="setting-subgroup__title">Tonalité</p>
+<div class="select-row"><select id="rootSelect">
+
+
+<option>C</option>
+<option>G</option>
+<option>D</option>
+<option>A</option>
+<option>E</option>
+<option>B</option>
+<option>F#</option>
+<option>C#</option>
+
+
+<option>F</option>
+<option>Bb</option>
+<option>Eb</option>
+<option>Ab</option>
+<option>Db</option>
+<option>Gb</option>
+
+
+</select><select id="modeSelect">
+
+
+<optgroup label="Modes grecs">
+<option>Majeur/Ionien</option>
+<option>Dorien</option>
+<option>Phrygien</option>
+<option>Lydien</option>
+<option>Mixolydien</option>
+<option>Mineur/Aeolien</option>
+<option>Locrien</option>
+</optgroup>
+<optgroup label="Modes mineurs harmoniques">
+<option>Ionien ♯5</option>
+<option>Dorien ♯4</option>
+<option>Phrygien dominant</option>
+<option>Lydien ♯2</option>
+<option>Ultra Locrien</option>
+<option>Mineur harmonique</option>
+<option>Locrien ♮6</option>
+</optgroup>
+<optgroup label="Modes mineurs mélodiques">
+<option value="Lydien augmenté">Lydien ♯5</option>
+<option value="Lydien dominant">Lydien ♭7</option>
+<option>Mixolydien ♭6</option>
+<option>Locrien ♮2</option>
+<option>Altéré</option>
+<option>Mineur mélodique</option>
+<option>Dorien ♭2</option>
+</optgroup>
+
+
+</select></div>
+</div>
+</div>
+</details>
+
+<div class="settings-section-pair">
+<details class="settings-section settings-section--content" open>
+<summary><span>03</span> Contenu de l’exercice</summary>
+<div class="settings-section__content settings-catalog">
+<div class="setting-subgroup"><p class="setting-subgroup__title">Notes</p><div id="notesSettings"><label class="settings-item"><input type="checkbox" id="note0" value="C" checked> C</label><label class="settings-item"><input type="checkbox" id="note1" value="C#/Db" checked> C#/Db</label><label class="settings-item"><input type="checkbox" id="note2" value="D" checked> D</label><label class="settings-item"><input type="checkbox" id="note3" value="D#/Eb" checked> D#/Eb</label><label class="settings-item"><input type="checkbox" id="note4" value="E" checked> E</label><label class="settings-item"><input type="checkbox" id="note5" value="F" checked> F</label><label class="settings-item"><input type="checkbox" id="note6" value="F#/Gb" checked> F#/Gb</label><label class="settings-item"><input type="checkbox" id="note7" value="G" checked> G</label><label class="settings-item"><input type="checkbox" id="note8" value="G#/Ab" checked> G#/Ab</label><label class="settings-item"><input type="checkbox" id="note9" value="A" checked> A</label><label class="settings-item"><input type="checkbox" id="note10" value="A#/Bb" checked> A#/Bb</label><label class="settings-item"><input type="checkbox" id="note11" value="B" checked> B</label></div></div>
+<div class="setting-subgroup"><p class="setting-subgroup__title">Couleurs d’accord</p><div id="qualitySettings"><label class="settings-item"><input type="checkbox" id="quality0" value="Maj" checked> Majeur</label><label class="settings-item"><input type="checkbox" id="quality1" value="min" checked> −</label><label class="settings-item"><input type="checkbox" id="quality2" value="7" checked> 7</label><label class="settings-item"><input type="checkbox" id="quality3" value="maj7" checked> Δ</label><label class="settings-item"><input type="checkbox" id="quality4" value="m7" checked> −7</label><label class="settings-item"><input type="checkbox" id="quality5" value="mMaj7" checked> −Δ</label><label class="settings-item"><input type="checkbox" id="quality6" value="maj7#5" checked> Δ♯5</label><label class="settings-item"><input type="checkbox" id="quality7" value="dim" checked> °</label><label class="settings-item"><input type="checkbox" id="quality8" value="dim7" checked> °7</label><label class="settings-item"><input type="checkbox" id="quality9" value="m7♭5" checked> Ø</label><label class="settings-item"><input type="checkbox" id="quality10" value="aug" checked> +</label><label class="settings-item"><input type="checkbox" id="quality11" value="sus2" checked> Sus2</label><label class="settings-item"><input type="checkbox" id="quality12" value="sus4" checked> Sus4</label></div></div>
+<div class="setting-subgroup"><p class="setting-subgroup__title">Cordes</p><div id="stringSettings"><label class="settings-item"><input type="checkbox" id="string0" value="Corde 6" checked> Corde 6</label><label class="settings-item"><input type="checkbox" id="string1" value="Corde 5" checked> Corde 5</label><label class="settings-item"><input type="checkbox" id="string2" value="Corde 4" checked> Corde 4</label><label class="settings-item"><input type="checkbox" id="string3" value="Corde 3" checked> Corde 3</label><label class="settings-item"><input type="checkbox" id="string4" value="Corde 2" checked> Corde 2</label><label class="settings-item"><input type="checkbox" id="string5" value="Corde 1" checked> Corde 1</label></div></div>
+<div class="setting-subgroup"><p class="setting-subgroup__title">Zones</p><div id="zoneSettings"><label class="settings-item"><input type="checkbox" id="zone0" value="Gauche" checked> Gauche</label><label class="settings-item"><input type="checkbox" id="zone1" value="Centre" checked> Centre</label><label class="settings-item"><input type="checkbox" id="zone2" value="Droite" checked> Droite</label></div></div>
+</div>
+</details>
+
+<details class="settings-section settings-section--info">
+<summary><span>02</span> Choix d’affichage</summary>
+<div class="settings-section__content" id="teacherOptions">
+<div class="display-options">
+<div><p class="setting-subgroup__title">Informations musicales</p><label><input type="checkbox" id="showTone" checked> Tonalité</label><label><input type="checkbox" id="showQuality" checked> Couleur d’accord</label><label><input type="checkbox" id="showDegree" checked> Degré</label><label><input type="checkbox" id="showInterval"> Intervalle cible</label><label><input type="checkbox" id="showNext" checked> Prochain accord</label></div>
+<div><p class="setting-subgroup__title">Repères de jeu</p><label><input type="checkbox" id="showString"> Corde</label><label><input type="checkbox" id="showZone"> Zone</label><label><input type="checkbox" id="showPositionAnswer" checked> Vérification : case</label><label><input type="checkbox" id="showPitchCheck" checked> Vérification au micro</label></div>
+</div>
+</div>
+</details>
+</div>
+
+<details class="settings-section">
+<summary><span>04</span> Intervalles</summary>
+<div class="settings-section__content">
+<div class="setting-subgroup">
+<p class="setting-subgroup__title">Intervalle cible</p>
+<div class="mode-selector interval-generation-mode">
+<label><input type="radio" name="intervalGenerationMode" value="chromatic" checked> Chromatique</label>
+<label><input type="radio" name="intervalGenerationMode" value="chord"> Notes et tensions de l’accord</label>
+</div>
+<div class="interval-options">
+
+
+
+
+
+<label>
+<input 
+type="checkbox"
+class="intervalOption"
+value="1"
+checked>
+
+1 - Fondamentale
+
+</label>
+
+
+<label>
+<input 
+type="checkbox"
+class="intervalOption"
+value="b2"
+checked>
+
+♭2 - Seconde mineure
+
+</label>
+
+
+<label>
+<input 
+type="checkbox"
+class="intervalOption"
+value="2"
+checked>
+
+2 - Seconde majeure
+
+</label>
+
+
+<label>
+<input 
+type="checkbox"
+class="intervalOption"
+value="b3"
+checked>
+
+♭3 - Tierce mineure
+
+</label>
+
+
+<label>
+<input 
+type="checkbox"
+class="intervalOption"
+value="3"
+checked>
+
+3 - Tierce majeure
+
+</label>
+
+
+<label>
+<input 
+type="checkbox"
+class="intervalOption"
+value="4"
+checked>
+
+4 - Quarte
+
+</label>
+
+
+<label>
+<input 
+type="checkbox"
+class="intervalOption"
+value="#4"
+checked>
+
+♯4 - Quarte augmentée
+
+</label>
+
+
+<label>
+<input 
+type="checkbox"
+class="intervalOption"
+value="b5"
+checked>
+
+♭5 - Quinte diminuée
+
+</label>
+
+
+<label>
+<input 
+type="checkbox"
+class="intervalOption"
+value="5"
+checked>
+
+5 - Quinte
+
+</label>
+
+
+<label>
+<input 
+type="checkbox"
+class="intervalOption"
+value="b6"
+checked>
+
+♭6 - Sixte mineure
+
+</label>
+
+
+<label>
+<input 
+type="checkbox"
+class="intervalOption"
+value="6"
+checked>
+
+6 - Sixte majeure
+
+</label>
+
+
+<label>
+<input 
+type="checkbox"
+class="intervalOption"
+value="b7"
+checked>
+
+♭7 - Septième mineure
+
+</label>
+
+
+<label>
+<input 
+type="checkbox"
+class="intervalOption"
+value="7"
+checked>
+
+7 - Septième majeure
+
+</label>
+
+
+</div>
+</div>
+
+</div>
+</details>
+
+<details class="settings-section">
+<summary><span>05</span> Changement d’exercice</summary>
+<div class="settings-section__content">
+<div class="setting-subgroup">
+<select id="measureChange">
+
+
+<option value="1">
+Toutes les 1 mesure
+</option>
+
+
+<option value="2">
+Toutes les 2 mesures
+</option>
+
+
+<option value="4" selected>
+Toutes les 4 mesures
+</option>
+
+
+</select>
+
+
+
+</div>
+</div>
+</details>
+
+<details class="settings-section settings-section--share">
+<summary><span>06</span> Partager avec un élève</summary>
+<div class="settings-section__content student-link-builder">
+
+<h3>Partager avec un élève</h3>
+
+<p>Le lien reprend les réglages actuels et ouvre une vue élève sans panneau de réglages.</p>
+
+<button type="button" id="createStudentLink">Créer un lien élève</button>
+
+<textarea id="studentLinkOutput" readonly aria-label="Lien élève généré" placeholder="Le lien apparaîtra ici."></textarea>
+
+<button type="button" id="copyStudentLink" hidden>Copier le lien</button>
+
+</div>
+
+</details>
+
+</section>
+
+
+</main>
+
+
+
+
+<footer>
+
+N<span class="brand-mark brand-mark--o">Ø</span>riv<span class="brand-mark brand-mark--a">Δ</span> v1.0
+
+</footer>
+
+
+
+</div>
+
+
+
+<script src="js/notation.js"></script>
+<script src="js/session.js"></script>
+<script src="js/intervals.js"></script>
+<script src="js/metronome.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/generator.js"></script>
+<script src="js/harmony.js"></script>
+<script src="js/pitch-check.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+<script src="js/student-navigation.js"></script>
+<script src="js/i18n.js"></script>
+
+
+
+</body>
+
+</html>

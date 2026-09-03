@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NØrivΔ — Écoute</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="hear-page">
+<div class="app">
+<header class="app-header">
+<div class="brand">
+<svg class="brand-logo" viewBox="0 0 64 64" role="img" aria-label="Logo NØrivΔ"><circle cx="32" cy="32" r="27" fill="#121212" stroke="#4a4a4a" stroke-width="2"/><path d="M18 20c9-8 20-8 28 0M18 44c9 8 20 8 28 0" fill="none" stroke="#56b4e9" stroke-width="3" stroke-linecap="round"/><path d="M23 17v30M41 17v30" stroke="#777" stroke-width="2"/><path d="M32 20l9 18H23z" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg>
+    <div><h1>N<span class="brand-mark brand-mark--o">Ø</span>riv<span class="brand-mark brand-mark--a">Δ</span></h1><p class="subtitle"><a class="subtitle-link" href="index.html" data-student-locked>Observe</a><span aria-hidden="true">•</span><a class="subtitle-link subtitle-link--active" href="notes.html" data-student-locked>Écoute</a><span aria-hidden="true">•</span><a class="subtitle-link" href="understand.html">Comprend</a><span aria-hidden="true">•</span><a class="subtitle-link" href="understand.html?view=tools">Outils</a></p></div>
+</div>
+<div id="settingsGear" class="settings-gear teacher-only" role="button" tabindex="0" aria-label="Afficher ou masquer les réglages" aria-expanded="true">⚙️</div>
+<button type="button" class="language-toggle" aria-label="Passer le site en anglais" title="English">🇫🇷</button>
+</header>
+
+<main>
+<section class="exercise-card note-exercise-card">
+    <div id="hearExerciseLabel" class="note-height-label">ÉCOUTE ET RETROUVE LA NOTE</div>
+    <div class="listening-icon" aria-hidden="true">♫</div>
+    <output id="hearAnswer" class="hear-answer" aria-live="polite" hidden></output>
+    <button id="replayNote" class="secondary-button">RÉÉCOUTER</button>
+
+    <div class="session-timer" aria-label="Durée de la session">
+        <span class="session-timer__label">SESSION</span>
+        <time id="sessionTimer" datetime="PT0S" aria-live="polite">00:00</time>
+    </div>
+
+    <section class="practice-metronome" aria-label="Métronome">
+        <h2>Métronome</h2>
+        <input type="range" id="bpm" min="40" max="200" value="80">
+        <span id="bpmValue">80 BPM</span>
+        <button id="metroButton">▶ Démarrer</button>
+    </section>
+</section>
+
+<section class="panel note-settings">
+    <h2>Réglages</h2>
+    <details class="hear-settings-group" open><summary><span>01</span> Exercice</summary><div class="hear-settings-group__content">
+        <div class="hear-setting-field">
+            <h3>Exercice</h3>
+            <select id="hearExerciseType" aria-label="Type d'exercice d'écoute">
+                <option value="note">Note isolée</option>
+                <option value="interval">Intervalle</option>
+                <option value="arpeggio">Arpège</option>
+                <option value="chord">Accord</option>
+                <option value="scale">Gamme et mode</option>
+            </select>
+        </div>
+        <div id="hearDirectionSettings" class="hear-setting-field hear-direction-settings" hidden>
+            <h3>Sens du motif</h3>
+            <div class="hear-direction-options" role="radiogroup" aria-label="Sens du motif">
+                <label><input type="radio" name="hearDirection" value="ascending" checked> Ascendant</label>
+                <label><input type="radio" name="hearDirection" value="descending"> Descendant</label>
+                <label><input type="radio" name="hearDirection" value="mixed"> Mixte</label>
+            </div>
+        </div>
+    </div></details>
+
+    <details id="hearIntervalSettings" class="hear-settings-group" hidden>
+        <summary>Intervalles</summary>
+        <div class="hear-settings-group__content hear-interval-settings">
+            <h3>Intervalles à reconnaître</h3>
+            <div id="hearIntervalOptions" class="hear-interval-options" aria-label="Intervalles à travailler"></div>
+        </div>
+    </details>
+
+    <details class="hear-settings-group" open><summary><span>02</span> Gamme et mode</summary><div class="hear-settings-group__content">
+    <div class="hear-choice-row">
+        <label><input type="radio" name="noteGenerationMode" value="chromatic" checked> Chromatique</label>
+        <label><input type="radio" name="noteGenerationMode" value="diatonic"> Diatonique</label>
+    </div>
+
+    <details id="hearHarmonySettings" class="hear-settings-subgroup" hidden>
+        <summary>Construction harmonique</summary>
+        <div class="hear-settings-group__content">
+        <div class="hear-choice-row">
+            <label><input type="radio" name="hearHarmonyMode" value="free" checked> Accords libres</label>
+            <label><input type="radio" name="hearHarmonyMode" value="harmonized"> Degrés harmonisés</label>
+        </div>
+        <label class="hear-degree-option"><input type="checkbox" id="showHearDegree" checked> Afficher le degré modal dans la réponse</label>
+        <div id="hearQualitySettings" class="hear-quality-settings" aria-label="Qualités d'accords"></div>
+        </div>
+    </details>
+
+    <div id="noteDiatonicSettings" class="hear-setting-field" hidden>
+        <h3>Gamme</h3>
+        <select id="noteRootSelect">
+            <option>C</option><option>G</option><option>D</option><option>A</option><option>E</option><option>B</option><option>F#</option><option>C#</option>
+            <option>F</option><option>Bb</option><option>Eb</option><option>Ab</option><option>Db</option><option>Gb</option>
+        </select>
+        <select id="noteModeSelect">
+            <optgroup label="Modes grecs"><option>Majeur/Ionien</option><option>Dorien</option><option>Phrygien</option><option>Lydien</option><option>Mixolydien</option><option>Mineur/Aeolien</option><option>Locrien</option></optgroup>
+            <optgroup label="Modes mineurs harmoniques"><option>Ionien ♯5</option><option>Dorien ♯4</option><option>Phrygien dominant</option><option>Lydien ♯2</option><option>Ultra Locrien</option><option>Mineur harmonique</option><option>Locrien ♮6</option></optgroup>
+            <optgroup label="Modes mineurs mélodiques"><option value="Lydien augmenté">Lydien ♯5</option><option value="Lydien dominant">Lydien ♭7</option><option>Mixolydien ♭6</option><option>Locrien ♮2</option><option>Altéré</option><option>Mineur mélodique</option><option>Dorien ♭2</option></optgroup>
+        </select>
+    </div>
+    </div></details>
+
+    <details class="hear-settings-group"><summary><span>03</span> Réponses</summary><div class="hear-settings-group__content"><div class="hear-setting-field"><h3>Notation</h3><label class="note-name-format"><select id="noteNameFormat" aria-label="Format des noms de notes"><option value="letter">C · D · E</option><option value="solfege">Do · Ré · Mi</option></select></label></div></div></details>
+
+    <details class="hear-settings-group"><summary><span>04</span> Source sonore</summary><div class="hear-settings-group__content hear-source-settings"><div class="hear-setting-field octave-settings">
+        <h3>Plage d'octaves</h3>
+        <label for="minOctave">De</label>
+        <select id="minOctave"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
+        <label for="maxOctave">à</label>
+        <select id="maxOctave"><option>2</option><option>3</option><option>4</option><option selected>5</option><option>6</option></select>
+    </div>
+
+    <div class="hear-setting-field instrument-settings">
+        <h3>Son</h3>
+        <select id="instrumentSelect" aria-label="Type de son">
+            <option value="guitar">Guitare</option>
+            <option value="piano">Piano</option>
+            <option value="marimba">Marimba</option>
+            <option value="voice">Voix</option>
+        </select>
+    </div>
+
+    <div class="hear-setting-field measure-settings">
+        <h3>Changement d'exercice</h3>
+        <select id="measureChange">
+            <option value="1">Toutes les 1 mesure</option>
+            <option value="2">Toutes les 2 mesures</option>
+            <option value="4" selected>Toutes les 4 mesures</option>
+        </select>
+    </div>
+    </div></details>
+
+    <details class="hear-settings-group"><summary><span>05</span> Partager avec un élève</summary><div class="hear-settings-group__content">
+    <div class="student-link-builder">
+        <h3>Partager avec un élève</h3>
+        <p>Le lien court reprend les réglages actuels et ouvre une version verrouillée.</p>
+        <button type="button" id="createNoteStudentLink">Créer un lien élève</button>
+        <textarea id="noteStudentLinkOutput" readonly aria-label="Lien élève pour l'écoute" placeholder="Le lien apparaîtra ici."></textarea>
+        <button type="button" id="copyNoteStudentLink" hidden>Copier le lien</button>
+    </div>
+    </div></details>
+</section>
+</main>
+<footer>N<span class="brand-mark brand-mark--o">Ø</span>riv<span class="brand-mark brand-mark--a">Δ</span> v1.0</footer>
+</div>
+<script src="js/harmony.js"></script>
+<script src="js/note-heights.js"></script>
+<script src="js/hear-session.js"></script>
+<script src="js/metronome.js"></script>
+<script src="js/note-storage.js"></script>
+<script src="js/student-navigation.js"></script>
+<script src="js/i18n.js"></script>
+</body>
+</html>
