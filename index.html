@@ -48,7 +48,7 @@ N<span class="brand-mark brand-mark--o">Ø</span>riv<span class="brand-mark bran
 <div id="settingsGear" class="settings-gear teacher-only">
 ⚙️
 </div>
-<button type="button" class="language-toggle" aria-label="Passer le site en anglais" title="English">🇫🇷</button>
+<button type="button" class="language-toggle" aria-label="Passer le site en anglais" title="English"><span class="language-flag language-flag--fr" aria-hidden="true"></span></button>
 
 
 </header>
@@ -133,12 +133,20 @@ PROCHAIN
 
 <output id="positionAnswer" class="position-answer" aria-live="polite" hidden></output>
 
-
 <span id="nextExercise">
 
 E♭ Δ
 
 </span>
+
+<section id="virtualFretboard" class="virtual-fretboard" aria-label="Manche de guitare interactif">
+<output id="virtualFretboardStatus" class="visually-hidden" aria-live="polite"></output>
+<div class="virtual-fretboard__surface">
+<div id="virtualFretboardGrid" class="virtual-fretboard__grid" role="group" aria-label="Cases du manche de guitare"></div>
+<div id="virtualFretboardInlays" class="virtual-fretboard__inlays" aria-hidden="true"></div>
+</div>
+<div id="virtualFretboardMarkers" class="virtual-fretboard__markers" aria-hidden="true"></div>
+</section>
 
 
 </div>
@@ -270,7 +278,7 @@ Réglages
 <div class="settings-section__content" id="teacherOptions">
 <div class="display-options">
 <div><p class="setting-subgroup__title">Informations musicales</p><label><input type="checkbox" id="showTone" checked> Tonalité</label><label><input type="checkbox" id="showQuality" checked> Couleur d’accord</label><label><input type="checkbox" id="showDegree" checked> Degré</label><label><input type="checkbox" id="showInterval"> Intervalle cible</label><label><input type="checkbox" id="showNext" checked> Prochain accord</label></div>
-<div><p class="setting-subgroup__title">Repères de jeu</p><label><input type="checkbox" id="showString"> Corde</label><label><input type="checkbox" id="showZone"> Zone</label><label><input type="checkbox" id="showPositionAnswer" checked> Vérification : case</label><label><input type="checkbox" id="showPitchCheck" checked> Vérification au micro</label></div>
+<div><p class="setting-subgroup__title">Repères de jeu</p><label><input type="checkbox" id="showString"> Corde</label><label><input type="checkbox" id="showZone"> Zone</label><label><input type="checkbox" id="showPositionAnswer" checked> Vérification : case</label><label><input type="checkbox" id="showPitchCheck" checked> Vérification au micro</label><label><input type="checkbox" id="showFretboard" checked> Manche interactif</label></div>
 </div>
 </div>
 </details>
@@ -528,6 +536,7 @@ N<span class="brand-mark brand-mark--o">Ø</span>riv<span class="brand-mark bran
 <script src="js/storage.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/generator.js"></script>
+<script src="js/guitar-neck.js"></script>
 <script src="js/harmony.js"></script>
 <script src="js/pitch-check.js"></script>
 <script src="js/ui.js"></script>

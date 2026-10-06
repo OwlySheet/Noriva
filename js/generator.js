@@ -39,6 +39,19 @@ return note.split("/")[0];
 
 }
 
+// Deux écritures différentes peuvent désigner la même hauteur (C♯ / D♭).
+// La répétition se vérifie donc à l'oreille, par classe de hauteur, et non
+// uniquement à partir du texte affiché.
+function notePitchClass(note){
+const spelling = note?.split("/")[0];
+return typeof getPitchClass === "function" ? getPitchClass(spelling) : spelling;
+}
+
+function isSameGeneratedNote(first, second){
+if(!first || !second) return false;
+return notePitchClass(first) === notePitchClass(second);
+}
+
 function getDegreeColorClass(quality){
 
 if(["dim", "dim7", "m7b5", "m7♭5"].includes(quality)){
@@ -112,7 +125,7 @@ mode
 );
 
 
-const eligibleChords = chordPool.filter(chord => noteIdentity(chord.root) !== excludedNote);
+const eligibleChords = chordPool.filter(chord => !isSameGeneratedNote(chord.root, excludedNote));
 const chord = random(eligibleChords.length ? eligibleChords : chordPool);
 
 
@@ -134,7 +147,7 @@ else{
 
 
 const availableNotes = checkedValues("note");
-const eligibleNotes = availableNotes.filter(candidate => noteIdentity(candidate) !== excludedNote);
+const eligibleNotes = availableNotes.filter(candidate => !isSameGeneratedNote(candidate, excludedNote));
 
 
 note = randomEnharmonicSpelling(random(eligibleNotes.length ? eligibleNotes : availableNotes));
@@ -262,7 +275,7 @@ let current = nextExercise;
 
 
 if(!current){
-current = createExercise(previous ? noteIdentity(previous.note) : null);
+current = createExercise(previous?.note ?? null);
 }
 
 
@@ -300,7 +313,7 @@ current.interval.label;
 
 
 
-nextExercise = createExercise(noteIdentity(current.note));
+nextExercise = createExercise(current.note);
 
 
 

@@ -28,6 +28,9 @@ document.getElementById("showInterval");
 const showPitchCheck =
 document.getElementById("showPitchCheck");
 
+const showFretboard =
+document.getElementById("showFretboard");
+
 
 
 const toneBlock =
@@ -59,6 +62,9 @@ document.getElementById("quality");
 
 const pitchCheckPanel =
 document.getElementById("pitchCheckPanel");
+
+const virtualFretboard =
+document.getElementById("virtualFretboard");
 
 
 
@@ -144,6 +150,10 @@ showInterval.checked ? "block" : "none";
 if(showPitchCheck && pitchCheckPanel){
 pitchCheckPanel.hidden = !showPitchCheck.checked;
 if(!showPitchCheck.checked && typeof stopPitchChecking === "function") stopPitchChecking();
+}
+
+if(showFretboard && virtualFretboard){
+virtualFretboard.hidden = !showFretboard.checked;
 }
 
 
@@ -252,7 +262,8 @@ document.getElementById("settingsGear");
 
 
 const studentLink =
-new URLSearchParams(window.location.search).has("student");
+new URLSearchParams(window.location.search).has("student") ||
+new URLSearchParams(window.location.search).has("s");
 
 
 
@@ -387,7 +398,7 @@ isStudentMode ? "teacher" : "student"
 
 document
 .querySelectorAll(
-"#showTone,#showQuality,#showNext,#showDegree,#showString,#showZone,#showInterval,#showPositionAnswer,#showPitchCheck"
+"#showTone,#showQuality,#showNext,#showDegree,#showString,#showZone,#showInterval,#showPositionAnswer,#showPitchCheck,#showFretboard"
 )
 .forEach(input=>{
 

@@ -55,13 +55,13 @@ return metronomeVolume;
 
 
 
-function clickSound(strong=false){
+function clickSound(strong=false, atTime){
 
 
 initAudio();
 
 
-const now = audioContext.currentTime;
+const now = atTime ?? audioContext.currentTime;
 
 
 // Oscillateur principal (corps du bois)
@@ -222,11 +222,10 @@ nextMeasure();
 }
 
 
-// Hear utilise le tempo comme horloge d'exercice, jamais comme clic audible.
-if(!document.body.classList.contains("hear-page")){
-
 clickSound(beat===0);
 
+if(typeof onMetronomeBeat === "function"){
+onMetronomeBeat(beat);
 }
 
 

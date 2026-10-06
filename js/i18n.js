@@ -282,7 +282,10 @@
             : (english ? "Understand" : "Comprend");
         document.title = `NØrivΔ — ${pageName}`;
         document.querySelectorAll(".language-toggle").forEach((button) => {
-            button.textContent = english ? "🇬🇧" : "🇫🇷";
+            button.replaceChildren(Object.assign(document.createElement("span"), {
+                className: `language-flag language-flag--${english ? "en" : "fr"}`,
+                ariaHidden: "true"
+            }));
             button.setAttribute("aria-label", english ? "Switch the site to French" : "Passer le site en anglais");
             button.title = english ? "Français" : "English";
             button.setAttribute("aria-pressed", String(english));

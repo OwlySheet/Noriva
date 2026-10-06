@@ -1,6 +1,7 @@
 // NeckLab - Storage System
 const IS_STUDENT =
-new URLSearchParams(window.location.search).has("student");
+new URLSearchParams(window.location.search).has("student") ||
+new URLSearchParams(window.location.search).has("s");
 
 
 const STORAGE_KEY =
@@ -13,7 +14,116 @@ return [...document.querySelectorAll(".intervalOption:checked")]
 
 }
 
+const observeCompactBooleanKeys = [
+"antiRepeat", "showTone", "showQuality", "showNext", "showDegree",
+"showString", "showZone", "showInterval", "showPositionAnswer",
+"showPitchCheck", "showFretboard"
+];
+
+function observeCompactValues(){
+return {
+roots: [...document.getElementById("rootSelect").options].map(option => option.value),
+modes: [...document.getElementById("modeSelect").options].map(option => option.value),
+notes: [...document.querySelectorAll("#notesSettings input")].map(input => input.value),
+qualities: [...document.querySelectorAll("#qualitySettings input")].map(input => input.value),
+strings: [...document.querySelectorAll("#stringSettings input")].map(input => input.value),
+zones: [...document.querySelectorAll("#zoneSettings input")].map(input => input.value),
+intervals: [...document.querySelectorAll(".intervalOption")].map(input => input.value)
+};
+}
+
+function compactMask(values, selected){
+return values.reduce((mask, value, index) => selected.includes(value) ? mask | (1 << index) : mask, 0);
+}
+
+function expandCompactMask(values, mask){
+return values.filter((value, index) => mask & (1 << index));
+}
+
+function encodeCompactStudentConfig(settings){
+const choices = observeCompactValues();
+const fields = [
+[1, 3], [Math.max(0, Math.min(160, Number(settings.bpm) - 40)), 8],
+[Math.max(0, Math.min(100, Number(settings.metronomeVolume))), 7],
+[settings.generationMode === "diatonic" ? 1 : 0, 1],
+[Math.max(0, choices.roots.indexOf(settings.root)), 4],
+[Math.max(0, choices.modes.indexOf(settings.mode)), 5],
+[compactMask(choices.notes, settings.notes), 12],
+[compactMask(choices.qualities, settings.qualities), 13],
+[compactMask(choices.strings, settings.strings), 6],
+[compactMask(choices.zones, settings.zones), 3],
+[compactMask(choices.intervals, settings.intervals), 13],
+[settings.intervalGenerationMode === "chord" ? 1 : 0, 1],
+[{ "1": 0, "2": 1, "4": 2 }[settings.measureChange] ?? 2, 2],
+...observeCompactBooleanKeys.map(key => [settings[key] ? 1 : 0, 1])
+];
+const bytes = [];
+let byte = 0;
+let bitCount = 0;
+fields.forEach(([fieldValue, width]) => {
+let value = fieldValue;
+let remaining = width;
+while(remaining){
+const take = Math.min(8 - bitCount, remaining);
+byte |= (value & ((1 << take) - 1)) << bitCount;
+value >>>= take;
+bitCount += take;
+remaining -= take;
+if(bitCount === 8){ bytes.push(byte); byte = 0; bitCount = 0; }
+}
+});
+if(bitCount) bytes.push(byte);
+return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function decodeCompactStudentConfig(encoded){
+try {
+const base64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
+const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
+const bytes = Uint8Array.from(atob(padded), character => character.charCodeAt(0));
+let byteIndex = 0;
+let bitCount = 0;
+function read(width){
+let value = 0;
+let shift = 0;
+while(width){
+if(byteIndex >= bytes.length) throw new Error("Configuration incomplète");
+const take = Math.min(8 - bitCount, width);
+value |= ((bytes[byteIndex] >> bitCount) & ((1 << take) - 1)) << shift;
+bitCount += take;
+if(bitCount === 8){ byteIndex++; bitCount = 0; }
+shift += take;
+width -= take;
+}
+return value;
+}
+if(read(3) !== 1) return null;
+const choices = observeCompactValues();
+const config = {
+bpm: String(read(8) + 40),
+metronomeVolume: String(read(7)),
+generationMode: read(1) ? "diatonic" : "chromatic",
+root: choices.roots[read(4)] || "C",
+mode: choices.modes[read(5)] || "Majeur/Ionien",
+notes: expandCompactMask(choices.notes, read(12)),
+qualities: expandCompactMask(choices.qualities, read(13)),
+strings: expandCompactMask(choices.strings, read(6)),
+zones: expandCompactMask(choices.zones, read(3)),
+intervals: expandCompactMask(choices.intervals, read(13)),
+intervalGenerationMode: read(1) ? "chord" : "chromatic",
+measureChange: ["1", "2", "4"][read(2)] || "4"
+};
+observeCompactBooleanKeys.forEach(key => { config[key] = Boolean(read(1)); });
+return config;
+} catch(error) {
+return null;
+}
+}
+
 function getStudentLinkConfig(){
+
+const compactConfig = new URLSearchParams(window.location.search).get("s");
+if(compactConfig) return decodeCompactStudentConfig(compactConfig);
 
 const encodedConfig = new URLSearchParams(window.location.search)
 .get("config");
@@ -63,24 +173,17 @@ showString: document.getElementById("showString")?.checked ?? false,
 showZone: document.getElementById("showZone")?.checked ?? false,
 showInterval: document.getElementById("showInterval")?.checked ?? false,
 showPositionAnswer: document.getElementById("showPositionAnswer")?.checked ?? true,
-showPitchCheck: document.getElementById("showPitchCheck")?.checked ?? true
+showPitchCheck: document.getElementById("showPitchCheck")?.checked ?? true,
+showFretboard: document.getElementById("showFretboard")?.checked ?? true
 };
 
 }
 
 function createStudentLink(){
-
-const data = new TextEncoder().encode(JSON.stringify(getShareableSettings()));
-const encodedConfig = btoa(String.fromCharCode(...data))
-.replace(/\+/g, "-")
-.replace(/\//g, "_")
-.replace(/=+$/, "");
-
 const studentUrl = new URL(window.location.href);
 studentUrl.search = "";
 studentUrl.hash = "";
-studentUrl.searchParams.set("student", "1");
-studentUrl.searchParams.set("config", encodedConfig);
+studentUrl.searchParams.set("s", encodeCompactStudentConfig(getShareableSettings()));
 
 return studentUrl.href;
 
@@ -147,7 +250,8 @@ if(intervalGenerationRadio) intervalGenerationRadio.checked = true;
 "showZone",
 "showInterval",
 "showPositionAnswer",
-"showPitchCheck"
+"showPitchCheck",
+"showFretboard"
 ].forEach(id => {
 const input = document.getElementById(id);
 if(input && typeof config[id] === "boolean") input.checked = config[id];
@@ -261,7 +365,10 @@ showPositionAnswer:
 document.getElementById("showPositionAnswer")?.checked ?? true,
 
 showPitchCheck:
-document.getElementById("showPitchCheck")?.checked ?? true
+document.getElementById("showPitchCheck")?.checked ?? true,
+
+showFretboard:
+document.getElementById("showFretboard")?.checked ?? true
 
 };
 
@@ -550,6 +657,14 @@ document.getElementById("showPitchCheck");
 if(showPitchCheck){
     showPitchCheck.checked =
     settings.showPitchCheck ?? true;
+}
+
+const showFretboard =
+document.getElementById("showFretboard");
+
+if(showFretboard){
+    showFretboard.checked =
+    settings.showFretboard ?? true;
 }
 
 updateStudentDisplay();

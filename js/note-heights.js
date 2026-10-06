@@ -28,6 +28,12 @@ let noteAudioContext;
 let previousExerciseIdentities = [];
 let hearAwaitingNext = false;
 let hearAnswerTimer = null;
+let selectedKonokolPatterns = [];
+let hearNextRhythmTimer = null;
+let hearRhythmAdvancing = false;
+let previousSingleRhythmPatternId = null;
+let hearRhythmDragPayload = null;
+let hearRhythmIncorrectIndexes = new Set();
 
 function randomItem(items){ return items[Math.floor(Math.random() * items.length)]; }
 function randomOctave(minimum, maximum){ return Math.floor(Math.random() * (maximum - minimum + 1)) + minimum; }
@@ -41,6 +47,7 @@ return pitch.replace(/^C/, "Do").replace(/^D/, "Ré").replace(/^E/, "Mi").replac
 }
 
 function getHearAnswer(exercise){
+if(exercise.type === "rhythm") return exercise.patterns.map(pattern => pattern.label).join(" · ");
 if(exercise.type === "interval") return exercise.label;
 if(exercise.type === "scale") return exercise.notes.map(note => formatHearPitch(note.pitch)).join(" · ");
 if(exercise.type === "chord") {
@@ -57,16 +64,10 @@ function exerciseIdentity(exercise){ return exercise.type + ":" + getHearAnswer(
 
 function hideHearAnswer(){
 window.clearTimeout(hearAnswerTimer);
-const answer = document.getElementById("hearAnswer");
-answer.hidden = true;
-answer.textContent = "";
 }
 
 function revealHearAnswer(){
-if(!currentExercise) return;
-const answer = document.getElementById("hearAnswer");
-answer.textContent = getHearAnswer(currentExercise);
-answer.hidden = false;
+// Les exercices d'écoute restent sans révélation visuelle de la solution.
 }
 
 function selectedHearQualities(){
@@ -79,20 +80,35 @@ return [...document.querySelectorAll(".hearIntervalOption:checked")].map(input =
 
 function updateHearControls(){
 if(typeof clearLongExerciseTimer === "function") clearLongExerciseTimer();
+window.clearTimeout(hearNextRhythmTimer);
+hearRhythmAdvancing = false;
 const exerciseType = getExerciseType();
+const listeningIcon = document.getElementById("listeningIcon");
+if(listeningIcon){
+listeningIcon.innerHTML = exerciseType === "rhythm"
+? `<svg viewBox="0 0 96 96" role="presentation"><path d="M28 79h40L60 25H36z"/><path d="M48 25v42"/><path d="M48 40l15-12"/><circle cx="63" cy="28" r="4"/><path d="M23 79h50"/></svg>`
+: "♫";
+}
+if(exerciseType !== "rhythm") selectedKonokolPatterns = [];
 const isHarmony = ["arpeggio", "chord"].includes(exerciseType);
 const needsScale = getNoteMode() === "diatonic" || exerciseType === "scale" || (isHarmony && document.querySelector('input[name="hearHarmonyMode"]:checked').value === "harmonized");
 
 document.getElementById("hearHarmonySettings").hidden = !isHarmony;
 document.getElementById("hearIntervalSettings").hidden = exerciseType !== "interval";
 document.getElementById("hearDirectionSettings").hidden = !["interval", "arpeggio", "scale"].includes(exerciseType);
+document.getElementById("hearVocalCheck").hidden = exerciseType !== "note";
+document.getElementById("hearRhythmWriter").hidden = exerciseType !== "rhythm";
+document.getElementById("hearRhythmSettings").hidden = exerciseType !== "rhythm";
+document.getElementById("hearRhythmPatternSettings").hidden = exerciseType !== "rhythm";
+document.getElementById("hearRhythmSelection").hidden = exerciseType !== "rhythm";
 document.getElementById("noteDiatonicSettings").hidden = !needsScale;
 document.getElementById("hearExerciseLabel").textContent = {
 note: "ÉCOUTE ET RETROUVE LA NOTE",
 interval: "ÉCOUTE ET RETROUVE L'INTERVALLE",
 arpeggio: "ÉCOUTE ET RETROUVE L'ARPÈGE",
 chord: "ÉCOUTE ET RETROUVE L'ACCORD",
-scale: "ÉCOUTE ET RETROUVE LA GAMME"
+scale: "ÉCOUTE ET RETROUVE LA GAMME",
+rhythm: "TROUVE LE PATTERN"
 }[exerciseType];
 currentExercise = null;
 }
@@ -108,6 +124,66 @@ const notePool = getNoteMode() === "diatonic"
 const pitch = randomItem(notePool);
 const octave = randomOctave(low, high);
 return { pitch, octave, midi: (octave + 1) * 12 + getPitchClass(pitch) };
+}
+
+function createRhythmExercise(){
+const count = Number(document.getElementById("hearRhythmPatternCount").value);
+const patternPool = getAvailableKonokolPatterns();
+let patterns;
+if(count === 1){
+const nonRepeatingPool = patternPool.filter(pattern => pattern.id !== previousSingleRhythmPatternId);
+const pattern = randomItem(nonRepeatingPool.length ? nonRepeatingPool : patternPool);
+previousSingleRhythmPatternId = pattern.id;
+patterns = [pattern];
+} else {
+patterns = Array.from({length: count}, () => randomItem(patternPool));
+}
+return { type: "rhythm", patterns, values: patterns.flatMap(pattern => pattern.label.split(" ")), notes: [], label: patterns.map(pattern => pattern.label).join(" · ") };
+}
+
+const konokolPatterns = [
+{ id: "tha-ka-de-mi", label: "Tha ka De Mi", slots: [1, 1, 1, 1], beams: [[0, 3, 1], [0, 3, 2]] },
+{ id: "tha-ka-de", label: "Tha Ka De", slots: [1, 1, 2], beams: [[0, 2, 1], [0, 1, 2]] },
+{ id: "tha-de-mi", label: "Tha De Mi", slots: [2, 1, 1], beams: [[0, 3, 1], [2, 3, 2]] },
+{ id: "tha-ka-mi", label: "Tha Ka Mi", slots: [1, 2, 1], beams: [[0, 3, 1]], flags: [[0, 1, "right", 2], [3, 1, "left", 2]] },
+{ id: "ka-de-mi", label: "Ka De Mi", slots: [0, 1, 1, 1], beams: [[1, 3, 1], [1, 3, 2]] },
+{ id: "tha-mi", label: "Tha Mi", slots: [3, 1], beams: [[0, 3, 1]], flags: [[3, 1, "left", 2]], dots: [0] },
+{ id: "tha-ka", label: "Tha Ka", slots: [1, 3], beams: [[0, 1, 1]], flags: [[0, 1, "right", 2]], dots: [1] },
+{ id: "tha-de", label: "Tha De", slots: [2, 2], beams: [[0, 2, 1]] },
+{ id: "de-mi", label: "De Mi", slots: [0, 0, 1, 1], beams: [[2, 3, 1], [2, 3, 2]] },
+{ id: "ka-de", label: "Ka De", slots: [0, 1, 1, 0], beams: [[1, 2, 1], [1, 2, 2]] },
+{ id: "ka-mi", label: "Ka Mi", slots: [0, 1, 0, 1], flags: [[1, 2, "right", 1], [3, 2, "right", 1]] },
+{ id: "tha", label: "Tha", slots: [4] },
+{ id: "ka", label: "Ka", slots: [0, 1, 0, 0], flags: [[1, 2, "right", 1]] },
+{ id: "de", label: "De", slots: [0, 0, 1, 0], flags: [[2, 2, "right", 1]] },
+{ id: "mi", label: "Mi", slots: [0, 0, 0, 1], flags: [[3, 2, "right", 1]] }
+];
+
+function renderKonokolPattern(pattern){
+const positions = []; let cursor = 0;
+const syllables = pattern.label.split(" ");
+pattern.slots.forEach(duration => { if(duration) positions.push({ x: 14 + cursor * 21, duration, start: cursor }); cursor += duration || 1; });
+const hasHorizontalBar = start => (pattern.beams || []).some(([from, to]) => start >= from && start <= to)
+    || (pattern.flags || []).some(([flagStart]) => flagStart === start);
+const notes = positions.map(({x, start}) => `<ellipse cx="${x}" cy="26" rx="4.5" ry="3.2" transform="rotate(-20 ${x} 26)" fill="currentColor"/><path d="M${x + 4} 26V${hasHorizontalBar(start) ? 12.5 : 9}" stroke="currentColor" stroke-width="2"/>`).join("");
+const xAt = start => 18 + start * 21;
+const beamY = level => level === 1 ? 9.5 : 14.5;
+const beams = (pattern.beams || []).map(([from, to, level]) => `<rect x="${xAt(from) - .4}" y="${beamY(level)}" width="${xAt(to) - xAt(from) + .8}" height="3" fill="currentColor"/>`).join("");
+const flags = (pattern.flags || []).map(([start, count, direction = "right", startLevel = 1]) => Array.from({length: count}, (_, index) => {
+const x = xAt(start), y = beamY(startLevel + index);
+return direction === "left"
+? `<path d="M${x - 8} ${y}H${x}v3H${x - 8}z" fill="currentColor"/>`
+: `<path d="M${x} ${y}H${x + 8}v3H${x}z" fill="currentColor"/>`;
+}).join("")).join("");
+const dots = (pattern.dots || []).map(start => `<circle cx="${xAt(start) + 8}" cy="26" r="1.8" fill="currentColor"/>`).join("");
+const rests = pattern.slots.map((duration, index) => duration ? "" : `<path d="M${14 + index * 21 - 3} 18l5 3-4 4" fill="none" stroke="currentColor" stroke-width="1.6"/>`).join("");
+const labels = positions.map(({x}, index) => `<text x="${x}" y="43" text-anchor="middle" fill="currentColor">${syllables[index] || ""}</text>`).join("");
+return `<svg class="konokol-notation" viewBox="0 0 98 48" aria-hidden="true">${rests}${notes}${beams}${flags}${dots}${labels}</svg>`;
+}
+
+function getAvailableKonokolPatterns(){
+const selected = new Set([...document.querySelectorAll(".hearRhythmPatternOption:checked")].map(input => input.value));
+return selected.size ? konokolPatterns.filter(pattern => selected.has(pattern.id)) : konokolPatterns;
 }
 
 function createIntervalExercise(){
@@ -199,6 +275,10 @@ label: root + " " + mode
 }
 
 function getAudioContext(){
+if(typeof initAudio === "function"){
+initAudio();
+return audioContext;
+}
 if(!noteAudioContext){
 noteAudioContext = new AudioContext();
 }
@@ -278,14 +358,52 @@ playPartial(context, start, frequency, 3, 0.035, Math.min(duration, 0.38), "sine
 playPartial(context, start + 0.008, frequency * 1.002, 1, 0.045, Math.min(duration, 0.72), "triangle");
 }
 
-function playExercise(exercise){
+function playExercise(exercise, syncWithPulse = false, startTime){
 const context = getAudioContext();
-const start = context.currentTime + 0.03;
+const start = startTime ?? context.currentTime + (syncWithPulse ? 0 : 0.03);
 const beatDuration = 60 / bpm;
+if(exercise.type === "rhythm"){
+const sixteenth = beatDuration / 4;
+exercise.patterns.forEach((pattern, patternIndex) => {
+let rhythmCursor = 0;
+pattern.slots.forEach(duration => { if(duration) playWoodblock(context, start + patternIndex * beatDuration + rhythmCursor * sixteenth); rhythmCursor += duration || 1; });
+});
+return exercise.patterns.length * beatDuration;
+}
 if(exercise.type === "chord" && getExerciseType() === "chord"){
 const chordDuration = beatDuration * 1.9;
 exercise.notes.forEach(note => playTone(note, start, chordDuration));
 return Math.max(chordDuration, document.getElementById("instrumentSelect").value === "piano" ? 3.2 : chordDuration);
+}
+
+function playWoodblock(context, start){
+const output = context.createGain();
+output.gain.setValueAtTime(.0001, start);
+output.gain.exponentialRampToValueAtTime(.16, start + .002);
+output.gain.exponentialRampToValueAtTime(.0001, start + .16);
+output.connect(context.destination);
+
+[[620, 1], [930, .42], [1450, .14]].forEach(([frequency, level]) => {
+const oscillator = context.createOscillator();
+const gain = context.createGain();
+oscillator.type = "sine";
+oscillator.frequency.setValueAtTime(frequency, start);
+oscillator.frequency.exponentialRampToValueAtTime(frequency * .92, start + .12);
+gain.gain.value = level;
+oscillator.connect(gain); gain.connect(output);
+oscillator.start(start); oscillator.stop(start + .18);
+});
+
+const noise = context.createBufferSource();
+const noiseBuffer = context.createBuffer(1, Math.floor(context.sampleRate * .012), context.sampleRate);
+const noiseData = noiseBuffer.getChannelData(0);
+for(let index = 0; index < noiseData.length; index++) noiseData[index] = (Math.random() * 2 - 1) * .25;
+const noiseFilter = context.createBiquadFilter();
+const noiseGain = context.createGain();
+noiseFilter.type = "bandpass"; noiseFilter.frequency.value = 2100; noiseFilter.Q.value = .8;
+noiseGain.gain.setValueAtTime(.045, start); noiseGain.gain.exponentialRampToValueAtTime(.0001, start + .012);
+noise.buffer = noiseBuffer; noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(output);
+noise.start(start); noise.stop(start + .014);
 }
 const noteDuration = beatDuration * 0.82;
 exercise.notes.forEach((note, index) => playTone(note, start + index * beatDuration, noteDuration));
@@ -294,7 +412,7 @@ return Math.max(noteDuration, (exercise.notes.length - 1) * beatDuration + reson
 }
 
 function isLongHearExercise(){
-return ["scale", "arpeggio"].includes(getExerciseType());
+return ["scale", "arpeggio", "rhythm"].includes(getExerciseType());
 }
 
 let longExerciseTimer = null;
@@ -306,6 +424,13 @@ longExerciseTimer = null;
 
 function scheduleLongExercise(duration){
 if(!metronomeRunning || !isLongHearExercise()) return;
+
+if(getExerciseType() === "rhythm"){
+rhythmMeasureCount = 0;
+rhythmBeatsPlayed = 0;
+rhythmPlaybackActive = false;
+return;
+}
 
 clearLongExerciseTimer();
 // La réponse n'apparaît qu'après le nombre de mesures choisi, puis une pulsation
@@ -324,32 +449,59 @@ generateAndPlay();
 }, answerStartWait * 1000);
 }
 
-function generateAndPlay(){
+function generateAndPlay(playImmediately = true){
 clearLongExerciseTimer();
 hideHearAnswer();
 const type = getExerciseType();
 let candidate;
 for(let attempt = 0; attempt < 12; attempt++){
-candidate = type === "note" ? { type: "note", notes: [createNoteHeight()] } : type === "interval" ? createIntervalExercise() : type === "scale" ? createScaleExercise() : createChordExercise();
+candidate = type === "note" ? { type: "note", notes: [createNoteHeight()] } : type === "interval" ? createIntervalExercise() : type === "scale" ? createScaleExercise() : type === "rhythm" ? createRhythmExercise() : createChordExercise();
 if(type === "arpeggio" && (getHearDirection() === "descending" || (getHearDirection() === "mixed" && Math.random() < .5))) candidate.notes.reverse();
 const identity = exerciseIdentity(candidate);
 if(!(previousExerciseIdentities.length >= 2 && previousExerciseIdentities.slice(-2).every(item => item === identity))) break;
 }
 currentExercise = candidate;
+if(type === "rhythm") { selectedKonokolPatterns = []; hearRhythmIncorrectIndexes.clear(); renderHearRhythmSelection(); }
 previousExerciseIdentities.push(exerciseIdentity(currentExercise));
 previousExerciseIdentities = previousExerciseIdentities.slice(-2);
-const duration = playExercise(currentExercise);
+if(playImmediately){
+const duration = type === "rhythm" ? 0 : playExercise(currentExercise);
 scheduleLongExercise(duration);
+}
+}
+
+function getHearExerciseBeatCount(exercise){
+if(exercise.type === "rhythm") return exercise.patterns.length;
+if(exercise.type === "chord") return 2;
+return Math.max(1, exercise.notes.length);
+}
+
+function replayExerciseWithMetronome(exercise){
+const context = getAudioContext();
+// Un léger délai laisse au navigateur le temps de programmer ensemble le clic
+// et les notes : chaque réécoute repart exactement sur le premier temps.
+const start = context.currentTime + 0.08;
+const beatDuration = 60 / bpm;
+// Un dernier clic sur la pulsation suivante rend la fin du motif audible.
+const beats = getHearExerciseBeatCount(exercise) + 1;
+
+if(!metronomeRunning){
+for(let index = 0; index < beats; index++){
+clickSound(index === 0, start + index * beatDuration);
+}
+}
+
+return playExercise(exercise, false, start);
 }
 
 function replayCurrentExercise(){
-if(!currentExercise) generateAndPlay();
-else {
+if(!currentExercise) generateAndPlay(false);
+if(currentExercise){
 clearLongExerciseTimer();
 hideHearAnswer();
 hearAwaitingNext = false;
 answerMeasuresRemaining = 0;
-const duration = playExercise(currentExercise);
+const duration = replayExerciseWithMetronome(currentExercise);
 scheduleLongExercise(duration);
 }
 }
@@ -358,9 +510,23 @@ let currentMeasure = 0;
 let measureLimit = Number(document.getElementById("measureChange").value);
 let skipFirstMeasure = false;
 let answerMeasuresRemaining = 0;
+let rhythmMeasureCount = 0;
+let rhythmBeatsPlayed = 0;
+let rhythmPlaybackActive = false;
 function setMeasureLimit(value){ measureLimit = Number(value); currentMeasure = 0; answerMeasuresRemaining = 0; }
 function nextMeasure(){
-if(isLongHearExercise()) return;
+if(isLongHearExercise()){
+if(getExerciseType() === "rhythm"){
+rhythmMeasureCount++;
+if(rhythmMeasureCount === 2 && currentExercise){
+playExercise(currentExercise, true);
+rhythmPlaybackActive = true;
+rhythmBeatsPlayed = 0;
+hearAwaitingNext = true;
+}
+}
+return;
+}
 if(skipFirstMeasure){ skipFirstMeasure = false; return; }
 if(hearAwaitingNext){
 answerMeasuresRemaining--;
@@ -379,18 +545,32 @@ const answerDuration = playExercise(currentExercise);
 answerMeasuresRemaining = Math.max(1, Math.ceil(answerDuration / ((60 / bpm) * 4)));
 }
 }
+function onMetronomeBeat(){
+if(!rhythmPlaybackActive || !currentExercise?.patterns) return;
+rhythmBeatsPlayed++;
+if(rhythmBeatsPlayed === currentExercise.patterns.length) revealHearAnswer();
+if(rhythmBeatsPlayed === currentExercise.patterns.length + 1){
+rhythmPlaybackActive = false;
+hearAwaitingNext = false;
+stopMetronome();
+}
+}
 function onMetronomeStart(){ skipFirstMeasure = true; hearAwaitingNext = false; answerMeasuresRemaining = 0; generateAndPlay(); }
-function onMetronomeStop(){ clearLongExerciseTimer(); window.clearTimeout(hearAnswerTimer); hearAwaitingNext = false; answerMeasuresRemaining = 0; }
+function onMetronomeStop(){ clearLongExerciseTimer(); window.clearTimeout(hearAnswerTimer); hearAwaitingNext = false; answerMeasuresRemaining = 0; rhythmPlaybackActive = false; rhythmBeatsPlayed = 0; rhythmMeasureCount = 0; }
 
 document.getElementById("replayNote").addEventListener("click", replayCurrentExercise);
 document.getElementById("measureChange").addEventListener("change", event => setMeasureLimit(event.target.value));
-document.getElementById("hearExerciseType").addEventListener("change", updateHearControls);
+document.getElementById("hearExerciseType").addEventListener("change", ()=>{
+updateHearControls();
+renderHearRhythmSelection();
+});
 document.querySelectorAll('input[name="noteGenerationMode"], input[name="hearHarmonyMode"]').forEach(input => input.addEventListener("change", updateHearControls));
-document.querySelectorAll("#noteRootSelect, #noteModeSelect, #minOctave, #maxOctave, #instrumentSelect, #noteNameFormat, #showHearDegree, .hearQualityOption, .hearIntervalOption, input[name=\"hearDirection\"]").forEach(control => control.addEventListener("change", ()=>{
+document.querySelectorAll("#noteRootSelect, #noteModeSelect, #minOctave, #maxOctave, #instrumentSelect, #noteNameFormat, #showHearDegree, #hearRhythmPatternCount, .hearQualityOption, .hearIntervalOption, input[name=\"hearDirection\"]").forEach(control => control.addEventListener("change", ()=>{
 currentExercise = null;
 previousExerciseIdentities = [];
 clearLongExerciseTimer();
 hideHearAnswer();
+if(getExerciseType() === "rhythm") renderHearRhythmSelection();
 }));
 
 const bpmSlider = document.getElementById("bpm");
@@ -417,4 +597,170 @@ hideHearAnswer();
 });
 });
 
+const hearRhythmPatternOptions = document.getElementById("hearRhythmPatternOptions");
+konokolPatterns.forEach(pattern => {
+const label = document.createElement("label");
+label.innerHTML = `<input class="hearRhythmPatternOption" type="checkbox" value="${pattern.id}" checked> ${pattern.label}`;
+const input = label.querySelector("input");
+input.addEventListener("change", ()=>{
+if(!document.querySelectorAll(".hearRhythmPatternOption:checked").length){
+document.querySelectorAll(".hearRhythmPatternOption").forEach(option => option.checked = true);
+}
+previousSingleRhythmPatternId = null;
+currentExercise = null;
+previousExerciseIdentities = [];
+hideHearAnswer();
+renderHearRhythmOptions();
+renderHearRhythmSelection();
+});
+hearRhythmPatternOptions.appendChild(label);
+});
+
 updateHearControls();
+
+const hearRhythmPatterns = document.getElementById("hearRhythmPatterns");
+const hearRhythmSelection = document.getElementById("hearRhythmSelection");
+const hearRhythmSelectedPatterns = document.getElementById("hearRhythmSelectedPatterns");
+const hearRhythmStatus = document.getElementById("hearRhythmStatus");
+
+function renderHearRhythmSelection(){
+const isRhythm = getExerciseType() === "rhythm";
+if(hearRhythmSelection) hearRhythmSelection.hidden = !isRhythm;
+if(!hearRhythmSelectedPatterns) return;
+const slotCount = currentExercise?.type === "rhythm"
+? currentExercise.patterns.length
+: Number(document.getElementById("hearRhythmPatternCount").value);
+selectedKonokolPatterns.length = slotCount;
+hearRhythmSelectedPatterns.dataset.slotCount = String(slotCount);
+hearRhythmSelectedPatterns.replaceChildren(...Array.from({length: slotCount}, (_, index) => {
+const id = selectedKonokolPatterns[index];
+const pattern = konokolPatterns.find(item => item.id === id);
+if(!pattern){
+const slot = document.createElement("div");
+slot.className = "hear-rhythm-selected-pattern hear-rhythm-selected-pattern--empty";
+slot.dataset.index = String(index);
+slot.setAttribute("aria-label", `Emplacement ${index + 1} vide`);
+addHearRhythmDropTarget(slot, index);
+return slot;
+}
+const item = document.createElement("button");
+item.type = "button";
+item.className = "hear-rhythm-selected-pattern";
+if(hearRhythmIncorrectIndexes.has(index)) item.classList.add("is-incorrect");
+item.draggable = true;
+item.dataset.pattern = id;
+item.dataset.index = String(index);
+item.setAttribute("aria-label", `Pattern sélectionné : ${pattern?.label || id}`);
+item.innerHTML = pattern ? renderKonokolPattern(pattern) : "";
+item.addEventListener("dragstart", event => {
+event.dataTransfer.effectAllowed = "move";
+hearRhythmDragPayload = { source: "selected", index };
+event.dataTransfer.setData("text/plain", JSON.stringify(hearRhythmDragPayload));
+item.classList.add("is-dragging");
+});
+item.addEventListener("dragend", () => { item.classList.remove("is-dragging"); hearRhythmDragPayload = null; });
+addHearRhythmDropTarget(item, index);
+return item;
+}));
+}
+
+function addHearRhythmDropTarget(target, index){
+target.addEventListener("dragenter", event => { event.preventDefault(); target.classList.add("is-drop-target"); });
+target.addEventListener("dragover", event => { event.preventDefault(); event.dataTransfer.dropEffect = hearRhythmDragPayload?.source === "option" ? "copy" : "move"; target.classList.add("is-drop-target"); });
+target.addEventListener("dragleave", () => target.classList.remove("is-drop-target"));
+target.addEventListener("drop", event => {
+event.preventDefault();
+target.classList.remove("is-drop-target");
+try {
+const data = hearRhythmDragPayload || JSON.parse(event.dataTransfer.getData("text/plain"));
+if(data.source === "option") selectedKonokolPatterns[index] = data.pattern;
+if(data.source === "selected" && data.index !== index){
+const moved = selectedKonokolPatterns[data.index];
+const replaced = selectedKonokolPatterns[index];
+selectedKonokolPatterns[index] = moved;
+selectedKonokolPatterns[data.index] = replaced;
+}
+hearRhythmIncorrectIndexes.clear();
+hearRhythmStatus.textContent = "";
+hearRhythmStatus.dataset.state = "";
+renderHearRhythmSelection();
+} catch(_) {}
+});
+}
+
+function validateHearRhythmAnswer(){
+if(hearRhythmAdvancing || currentExercise?.type !== "rhythm" || !selectedKonokolPatterns.length) return;
+const expected = currentExercise.patterns.map(item => item.id);
+const selectedCount = selectedKonokolPatterns.filter(Boolean).length;
+if(selectedCount !== expected.length){
+hearRhythmStatus.textContent = `Choisis encore ${expected.length - selectedCount} pattern${expected.length - selectedCount > 1 ? "s" : ""}.`;
+hearRhythmStatus.dataset.state = "trying";
+return;
+}
+const correct = selectedKonokolPatterns.join("|") === expected.join("|");
+hearRhythmStatus.textContent = correct ? "✓ Patterns corrects" : "Réessaie";
+hearRhythmStatus.dataset.state = correct ? "correct" : "trying";
+if(!correct){
+hearRhythmIncorrectIndexes = new Set(selectedKonokolPatterns.flatMap((patternId, index) => patternId === expected[index] ? [] : [index]));
+renderHearRhythmSelection();
+return;
+}
+
+hearRhythmAdvancing = true;
+hearNextRhythmTimer = window.setTimeout(()=>{
+hearRhythmAdvancing = false;
+selectedKonokolPatterns = [];
+hearRhythmIncorrectIndexes.clear();
+hearRhythmStatus.textContent = "";
+hearRhythmStatus.dataset.state = "";
+renderHearRhythmSelection();
+
+if(getExerciseType() !== "rhythm") return;
+if(metronomeRunning) generateAndPlay();
+else startMetronome();
+}, 1000);
+}
+
+function renderHearRhythmOptions(){
+if(!hearRhythmPatterns) return;
+hearRhythmPatterns.replaceChildren(...getAvailableKonokolPatterns().map(pattern => {
+const button = document.createElement("button"); button.type = "button"; button.className = "hear-rhythm-pattern"; button.dataset.pattern = pattern.id; button.setAttribute("aria-label", pattern.label); button.draggable = true; button.innerHTML = renderKonokolPattern(pattern);
+button.addEventListener("dragstart", event => {
+event.dataTransfer.effectAllowed = "copy";
+hearRhythmDragPayload = { source: "option", pattern: pattern.id };
+event.dataTransfer.setData("text/plain", JSON.stringify(hearRhythmDragPayload));
+button.classList.add("is-dragging");
+});
+button.addEventListener("dragend", () => { button.classList.remove("is-dragging"); hearRhythmDragPayload = null; });
+button.addEventListener("click", () => {
+if(currentExercise?.type !== "rhythm") return;
+const expectedCount = currentExercise.patterns.length;
+if(expectedCount === 1) selectedKonokolPatterns = [pattern.id];
+else if(selectedKonokolPatterns.filter(Boolean).length < expectedCount) selectedKonokolPatterns[selectedKonokolPatterns.findIndex(item => !item)] = pattern.id;
+else return;
+hearRhythmIncorrectIndexes.clear();
+hearRhythmStatus.textContent = "";
+hearRhythmStatus.dataset.state = "";
+renderHearRhythmSelection();
+}); return button;
+}));
+}
+
+renderHearRhythmOptions();
+document.getElementById("hearRhythmValidate")?.addEventListener("click", validateHearRhythmAnswer);
+document.getElementById("hearRhythmClear")?.addEventListener("click", () => { selectedKonokolPatterns = []; hearRhythmIncorrectIndexes.clear(); hearRhythmStatus.textContent = ""; hearRhythmStatus.dataset.state = ""; renderHearRhythmSelection(); });
+document.addEventListener("keydown", event => {
+if(event.key.toLowerCase() === "r" && !event.metaKey && !event.ctrlKey && !event.altKey){
+const target = event.target;
+if(target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement) return;
+event.preventDefault();
+replayCurrentExercise();
+return;
+}
+if(event.key !== "Enter" || getExerciseType() !== "rhythm") return;
+const target = event.target;
+if(target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement) return;
+if(!selectedKonokolPatterns.length) return;
+event.preventDefault();
+validateHearRhythmAnswer();
+});

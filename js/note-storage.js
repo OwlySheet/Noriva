@@ -5,7 +5,7 @@ const NOTE_STUDENT_MODE = noteUrlParams.has("student") || noteUrlParams.has("s")
 const NOTE_STORAGE_KEY = "necklab_hear_settings";
 
 const compactHearValues = {
-exerciseType: ["note", "interval", "arpeggio", "chord", "scale"],
+exerciseType: ["note", "interval", "arpeggio", "chord", "scale", "rhythm"],
 direction: ["ascending", "descending", "mixed"],
 root: ["C", "G", "D", "A", "E", "B", "F#", "C#", "F", "Bb", "Eb", "Ab", "Db", "Gb"],
 mode: ["Majeur/Ionien", "Dorien", "Phrygien", "Lydien", "Mixolydien", "Mineur/Aeolien", "Locrien", "Ionien ♯5", "Dorien ♯4", "Phrygien dominant", "Lydien ♯2", "Ultra Locrien", "Mineur harmonique", "Locrien ♮6", "Lydien augmenté", "Lydien dominant", "Mixolydien ♭6", "Locrien ♮2", "Altéré", "Mineur mélodique", "Dorien ♭2"],
@@ -29,7 +29,8 @@ minOctave: document.getElementById("minOctave").value,
 maxOctave: document.getElementById("maxOctave").value,
 instrument: document.getElementById("instrumentSelect").value,
 noteNameFormat: document.getElementById("noteNameFormat").value,
-measureChange: document.getElementById("measureChange").value
+measureChange: document.getElementById("measureChange").value,
+rhythmPatterns: [...document.querySelectorAll(".hearRhythmPatternOption:checked")].map(input => input.value)
 };
 }
 
@@ -74,6 +75,99 @@ compactIndex(compactHearValues.direction, settings.direction)
 return values.map(value => value.toString(36)).join(".");
 }
 
+function encodeShortNoteSettings(settings){
+const qualityValues = [...document.querySelectorAll(".hearQualityOption")].map(input => input.value);
+const intervalValues = [...document.querySelectorAll(".hearIntervalOption")].map(input => input.value);
+const rhythmPatternValues = [...document.querySelectorAll(".hearRhythmPatternOption")].map(input => input.value);
+const fields = [
+[0, 2], [Math.max(0, Math.min(160, Number(settings.bpm) - 40)), 8],
+[compactIndex(compactHearValues.exerciseType, settings.exerciseType), 3],
+[settings.generationMode === "diatonic" ? 1 : 0, 1],
+[settings.harmonyMode === "harmonized" ? 1 : 0, 1],
+[settings.showHearDegree ? 1 : 0, 1],
+[compactMask(qualityValues, settings.qualities), 13],
+[compactMask(intervalValues, settings.intervals), 13],
+[compactIndex(compactHearValues.root, settings.root), 4],
+[compactIndex(compactHearValues.mode, settings.mode), 5],
+[Math.max(0, Math.min(7, Number(settings.minOctave))), 3],
+[Math.max(0, Math.min(7, Number(settings.maxOctave))), 3],
+[compactIndex(compactHearValues.instrument, settings.instrument), 2],
+[settings.noteNameFormat === "solfege" ? 1 : 0, 1],
+[compactIndex(compactHearValues.measureChange, settings.measureChange), 2],
+[compactIndex(compactHearValues.direction, settings.direction), 2],
+[compactMask(rhythmPatternValues, settings.rhythmPatterns || rhythmPatternValues), 15]
+];
+const bytes = [];
+let byte = 0;
+let bitCount = 0;
+fields.forEach(([fieldValue, width]) => {
+let value = fieldValue;
+let remaining = width;
+while(remaining){
+const take = Math.min(8 - bitCount, remaining);
+byte |= (value & ((1 << take) - 1)) << bitCount;
+value >>>= take;
+bitCount += take;
+remaining -= take;
+if(bitCount === 8){ bytes.push(byte); byte = 0; bitCount = 0; }
+}
+});
+if(bitCount) bytes.push(byte);
+return "x" + btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function decodeShortNoteSettings(encoded){
+try {
+const base64 = encoded.slice(1).replace(/-/g, "+").replace(/_/g, "/");
+const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
+const bytes = Uint8Array.from(atob(padded), character => character.charCodeAt(0));
+let byteIndex = 0;
+let bitCount = 0;
+function read(width){
+let value = 0;
+let shift = 0;
+while(width){
+if(byteIndex >= bytes.length) throw new Error("Configuration incomplète");
+const take = Math.min(8 - bitCount, width);
+value |= ((bytes[byteIndex] >> bitCount) & ((1 << take) - 1)) << shift;
+bitCount += take;
+if(bitCount === 8){ byteIndex++; bitCount = 0; }
+shift += take;
+width -= take;
+}
+return value;
+}
+const version = read(2);
+if(![0, 3].includes(version)) return null;
+const qualityValues = [...document.querySelectorAll(".hearQualityOption")].map(input => input.value);
+const intervalValues = [...document.querySelectorAll(".hearIntervalOption")].map(input => input.value);
+const rhythmPatternValues = [...document.querySelectorAll(".hearRhythmPatternOption")].map(input => input.value);
+const config = {
+bpm: String(read(8) + 40),
+exerciseType: compactHearValues.exerciseType[read(3)] || "note",
+generationMode: read(1) ? "diatonic" : "chromatic",
+harmonyMode: read(1) ? "harmonized" : "free",
+showHearDegree: Boolean(read(1)),
+qualities: expandMask(qualityValues, read(13)),
+intervals: expandMask(intervalValues, read(13)),
+root: compactHearValues.root[read(4)] || "C",
+mode: compactHearValues.mode[read(5)] || "Majeur/Ionien",
+minOctave: String(Math.max(1, Math.min(5, read(3)))),
+maxOctave: String(Math.max(2, Math.min(6, read(3)))),
+instrument: compactHearValues.instrument[read(2)] || "guitar",
+noteNameFormat: read(1) ? "solfege" : "letter",
+measureChange: compactHearValues.measureChange[read(2)] || "4",
+direction: compactHearValues.direction[read(2)] || "ascending"
+};
+config.rhythmPatterns = version === 0
+? expandMask(rhythmPatternValues, read(15))
+: rhythmPatternValues;
+return config;
+} catch(error) {
+return null;
+}
+}
+
 function decodeCompactNoteSettings(encoded){
 try {
 const values = encoded.split(".").map(value => Number.parseInt(value, 36));
@@ -103,7 +197,7 @@ return null;
 
 function decodeNoteSettings(){
 const compact = noteUrlParams.get("s");
-if(compact) return decodeCompactNoteSettings(compact);
+if(compact) return compact.startsWith("x") ? decodeShortNoteSettings(compact) : decodeCompactNoteSettings(compact);
 
 const encoded = noteUrlParams.get("config");
 if(!NOTE_STUDENT_MODE || !encoded) return null;
@@ -161,6 +255,12 @@ input.checked = settings.intervals.includes(input.value);
 });
 }
 
+if(settings.rhythmPatterns){
+document.querySelectorAll(".hearRhythmPatternOption").forEach(input => {
+input.checked = settings.rhythmPatterns.includes(input.value);
+});
+}
+
 const bpmSlider = document.getElementById("bpm");
 if(settings.bpm && bpmSlider){
 bpmSlider.value = settings.bpm;
@@ -182,7 +282,7 @@ function createNoteStudentLink(){
 const url = new URL(window.location.href);
 url.search = "";
 url.hash = "";
-url.searchParams.set("s", encodeCompactNoteSettings(getNoteSettings()));
+url.searchParams.set("s", encodeShortNoteSettings(getNoteSettings()));
 return url.href;
 }
 

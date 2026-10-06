@@ -56,6 +56,9 @@ const status = document.getElementById("pitchCheckStatus");
 if(!status) return;
 status.textContent = message;
 status.dataset.state = state;
+const exerciseCard = document.querySelector(".exercise-card");
+exerciseCard?.classList.toggle("is-pitch-correct", state === "correct");
+exerciseCard?.classList.toggle("is-pitch-incorrect", state === "trying");
 }
 
 function updatePitchCheck(){
@@ -115,6 +118,7 @@ pitchAudioContext?.close();
 pitchAudioContext = null;
 const button = document.getElementById("pitchCheckButton");
 if(button) button.textContent = "🎙 Activer le micro";
+setPitchStatus("", "idle");
 }
 
 document.getElementById("pitchCheckButton")?.addEventListener("click", ()=>{

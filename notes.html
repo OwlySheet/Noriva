@@ -14,15 +14,17 @@
     <div><h1>N<span class="brand-mark brand-mark--o">Ø</span>riv<span class="brand-mark brand-mark--a">Δ</span></h1><p class="subtitle"><a class="subtitle-link" href="index.html" data-student-locked>Observe</a><span aria-hidden="true">•</span><a class="subtitle-link subtitle-link--active" href="notes.html" data-student-locked>Écoute</a><span aria-hidden="true">•</span><a class="subtitle-link" href="understand.html">Comprend</a><span aria-hidden="true">•</span><a class="subtitle-link" href="understand.html?view=tools">Outils</a></p></div>
 </div>
 <div id="settingsGear" class="settings-gear teacher-only" role="button" tabindex="0" aria-label="Afficher ou masquer les réglages" aria-expanded="true">⚙️</div>
-<button type="button" class="language-toggle" aria-label="Passer le site en anglais" title="English">🇫🇷</button>
+<button type="button" class="language-toggle" aria-label="Passer le site en anglais" title="English"><span class="language-flag language-flag--fr" aria-hidden="true"></span></button>
 </header>
 
 <main>
 <section class="exercise-card note-exercise-card">
     <div id="hearExerciseLabel" class="note-height-label">ÉCOUTE ET RETROUVE LA NOTE</div>
-    <div class="listening-icon" aria-hidden="true">♫</div>
-    <output id="hearAnswer" class="hear-answer" aria-live="polite" hidden></output>
+    <div id="listeningIcon" class="listening-icon" aria-hidden="true">♫</div>
     <button id="replayNote" class="secondary-button">RÉÉCOUTER</button>
+    <section id="hearVocalCheck" class="hear-vocal-check" hidden aria-live="polite"><button type="button" id="hearVocalButton">🎙 Chanter la note</button><output id="hearVocalStatus"></output></section>
+    <section id="hearRhythmWriter" class="hear-rhythm-writer" hidden aria-live="polite"><div id="hearRhythmPatterns" class="hear-rhythm-patterns" aria-label="Patterns Konokol en doubles croches"></div></section>
+    <section id="hearRhythmSelection" class="hear-rhythm-selection" hidden aria-live="polite"><p>Ma réponse</p><div id="hearRhythmSelectedPatterns" class="hear-rhythm-selected-patterns"></div><div class="hear-rhythm-selection__actions"><button type="button" id="hearRhythmValidate">Valider</button><button type="button" id="hearRhythmClear">Effacer</button></div><output id="hearRhythmStatus"></output></section>
 
     <div class="session-timer" aria-label="Durée de la session">
         <span class="session-timer__label">SESSION</span>
@@ -47,7 +49,8 @@
                 <option value="interval">Intervalle</option>
                 <option value="arpeggio">Arpège</option>
                 <option value="chord">Accord</option>
-                <option value="scale">Gamme et mode</option>
+            <option value="scale">Gamme et mode</option>
+            <option value="rhythm">Relevé rythmique</option>
             </select>
         </div>
         <div id="hearDirectionSettings" class="hear-setting-field hear-direction-settings" hidden>
@@ -58,6 +61,8 @@
                 <label><input type="radio" name="hearDirection" value="mixed"> Mixte</label>
             </div>
         </div>
+        <div id="hearRhythmSettings" class="hear-setting-field" hidden><label class="hear-rhythm-count">Patterns<select id="hearRhythmPatternCount"><option value="1">1 Pattern</option><option value="2">2 Patterns</option><option value="3">3 Patterns</option><option value="4">4 Patterns</option></select></label></div>
+        <div id="hearRhythmPatternSettings" class="hear-setting-field" hidden><h3>Patterns à travailler</h3><div id="hearRhythmPatternOptions" class="hear-rhythm-pattern-options" aria-label="Patterns rythmiques à travailler"></div></div>
     </div></details>
 
     <details id="hearIntervalSettings" class="hear-settings-group" hidden>
@@ -145,6 +150,7 @@
 </div>
 <script src="js/harmony.js"></script>
 <script src="js/note-heights.js"></script>
+<script src="js/hear-pitch-check.js"></script>
 <script src="js/hear-session.js"></script>
 <script src="js/metronome.js"></script>
 <script src="js/note-storage.js"></script>
